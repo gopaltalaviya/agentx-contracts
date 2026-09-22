@@ -1,0 +1,12 @@
+{
+  "_comment": "Monad mainnet. Conservative everywhere: real funds auto-release against these windows.",
+  "minStake": "100000000",
+  "withdrawDelaySeconds": 1209600,
+  "fastPathMax": "500000",
+  "fastPathMinScore": 80,
+  "protocolFeeBps": 100,
+  "acceptWindowSeconds": 900,
+  "workWindowSeconds": 3600,
+  "reviewWindowSeconds": 3600,
+  "confidenceFloor": 50
+}

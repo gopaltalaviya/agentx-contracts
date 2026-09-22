@@ -1,0 +1,10 @@
+{
+  "chainId": 31337,
+  "deployedAt": "+058695-06-11T04:43:04.000Z",
+  "commit": "unknown",
+  "startBlock": 1,
+  "contracts": {
+    "MockUSDC": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "PaymentToken": "0x5fbdb2315678afecb367f032d93f642f64180aa3"
+  }
+}

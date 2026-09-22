@@ -1,0 +1,58 @@
+name: contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  test:
+    name: build · test · coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with: { version: stable }
+
+      - name: Show versions
+        run: forge --version
+
+      - name: Format check
+        run: forge fmt --check
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Test (10k fuzz runs)
+        run: forge test -vvv
+
+      - name: Coverage
+        run: forge coverage --report summary
+
+      - name: Gas snapshot must not drift
+        run: forge snapshot --check || (echo "::error::Gas changed. Run 'make snapshot' and commit .gas-snapshot." && exit 1)
+
+  config:
+    name: config integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      # Every network must declare the SAME parameter keys. Catches a param
+      # added to one chain and forgotten on another.
+      - name: Parameter key parity
+        run: node scripts/check-config.mjs
+
+      # The ERC-8004 registries are upgradeable proxies owned by someone else.
+      # If the implementation moves, we want to know from CI, not from a
+      # failing demo.
+      - name: ERC-8004 registry probe (non-blocking)
+        continue-on-error: true
+        run: node scripts/verify-erc8004.mjs

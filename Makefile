@@ -48,6 +48,9 @@ fmt:
 lint:
 	forge fmt --check
 
+secrets:
+	node scripts/check-no-secrets.mjs
+
 verify-erc8004:
 	node scripts/verify-erc8004.mjs
 
@@ -57,9 +60,17 @@ drift:
 export:
 	node scripts/export-abis.mjs
 
+# Verification is opt-in (VERIFY=1). Explorer verifiers reject or rate-limit
+# often, and a failed verify must not look like a failed deploy — the
+# contracts are already on-chain by then. Verify afterwards with `make verify`.
+VERIFY_FLAG := $(if $(VERIFY),--verify,)
+
 deploy:
-	forge script script/Deploy.s.sol:Deploy --rpc-url $(NETWORK) --broadcast --verify -vvvv
+	forge script script/Deploy.s.sol:Deploy --rpc-url $(NETWORK) --broadcast $(VERIFY_FLAG) -vvv
 	node scripts/write-deployment.mjs $(NETWORK)
+
+verify:
+	forge script script/Deploy.s.sol:Deploy --rpc-url $(NETWORK) --verify --resume
 
 deploy-local:
 	$(MAKE) deploy NETWORK=anvil

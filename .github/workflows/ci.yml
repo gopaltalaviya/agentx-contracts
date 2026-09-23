@@ -45,6 +45,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
 
+      # .env.example is tracked and sits next to .env with identical variable
+      # names, which makes pasting a real value into the wrong one easy and
+      # quiet. This makes it loud.
+      - name: No secrets in tracked files
+        run: node scripts/check-no-secrets.mjs
+
       # Every network must declare the SAME parameter keys. Catches a param
       # added to one chain and forgotten on another.
       - name: Parameter key parity

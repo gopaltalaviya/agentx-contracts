@@ -89,10 +89,12 @@ if (contracts['MockUSDC']) {
 // addresses everywhere else. Resolved here so nothing downstream branches.
 const erc8004 = {};
 if (net.erc8004.deployWithProtocol) {
-  if (contracts['IdentityRegistry']) erc8004.identityRegistry = contracts['IdentityRegistry'];
-  if (contracts['ReputationRegistry']) {
-    erc8004.reputationRegistry = contracts['ReputationRegistry'];
-  }
+  // The reference implementation compiles under the Mock* names; downstream
+  // only ever sees the resolved role, never the contract name.
+  const id = contracts['MockIdentityRegistry'] ?? contracts['IdentityRegistry'];
+  const rep = contracts['MockReputationRegistry'] ?? contracts['ReputationRegistry'];
+  if (id) erc8004.identityRegistry = id;
+  if (rep) erc8004.reputationRegistry = rep;
 } else {
   if (net.erc8004.identityRegistry) erc8004.identityRegistry = net.erc8004.identityRegistry;
   if (net.erc8004.reputationRegistry) {

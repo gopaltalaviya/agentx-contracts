@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {AgentAccountFactory} from "../src/AgentAccountFactory.sol";
+import {StakeVault} from "../src/StakeVault.sol";
+import {TaskEscrow} from "../src/TaskEscrow.sol";
+import {MockIdentityRegistry, MockReputationRegistry} from "../src/mocks/MockERC8004.sol";
 import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
@@ -13,10 +17,10 @@ import {console2} from "forge-std/console2.sol";
 ///
 ///         There is no `if (mainnet)` anywhere. See docs/08.
 ///
-/// @dev M0 scope: payment token only. M1 extends `run()` with StakeVault,
-///      TaskEscrow and AgentAccountFactory, plus the ERC-8004 reference
-///      registries on chains where they are absent (Monad testnet — verified
-///      2026-09-22, see docs/09 §8).
+/// @dev Deploys the full protocol: payment token (where configured), the
+///      ERC-8004 registries on chains where they are absent (Monad testnet —
+///      verified 2026-09-22, see docs/09 §8), then StakeVault, TaskEscrow and
+///      AgentAccountFactory, wired together from config.
 contract Deploy is Script {
     struct Params {
         uint96 minStake;
@@ -43,28 +47,59 @@ contract Deploy is Script {
     function run() public {
         Params memory p = _readParams();
         bool isTestnet = _netBool("testnet");
+        address admin = msg.sender;
 
         console2.log("=====================================");
         console2.log("AGENTX deploy");
         console2.log("  chain    :", _netString("name"));
         console2.log("  chainId  :", chainId);
         console2.log("  testnet  :", isTestnet);
+        console2.log("  admin    :", admin);
         console2.log("=====================================");
 
         vm.startBroadcast();
 
         address paymentToken = _resolvePaymentToken(isTestnet);
-        _reportErc8004(isTestnet);
+        (address identityRegistry, address reputationRegistry) = _resolveErc8004(isTestnet);
+
+        StakeVault vault = new StakeVault(admin);
+        vault.configure(paymentToken, identityRegistry, p.minStake, p.withdrawDelaySeconds);
+
+        TaskEscrow escrow = new TaskEscrow(admin);
+        escrow.configure(
+            paymentToken,
+            identityRegistry,
+            reputationRegistry,
+            address(vault),
+            admin, // feeRecipient — C3, replace with the real address before mainnet
+            TaskEscrow.Config({
+                fastPathMax: p.fastPathMax,
+                fastPathMinScore: p.fastPathMinScore,
+                protocolFeeBps: p.protocolFeeBps,
+                reviewWindow: p.reviewWindowSeconds,
+                // Caller-supplied windows are clamped to these. Without a
+                // ceiling a client could set a 1000-year deadline and lock its
+                // own funds past any refund.
+                maxAcceptWindow: p.acceptWindowSeconds * 10,
+                maxWorkWindow: p.workWindowSeconds * 10
+            })
+        );
+
+        AgentAccountFactory factory = new AgentAccountFactory(paymentToken);
 
         vm.stopBroadcast();
 
-        // Written to deployments/<chainId>.json by scripts/write-deployment.mjs,
-        // which reads the broadcast artifact. Never hand-edited.
         console2.log("");
-        console2.log("DEPLOYED paymentToken:", paymentToken);
-        console2.log("PARAM minStake       :", p.minStake);
-        console2.log("PARAM fastPathMax    :", p.fastPathMax);
-        console2.log("PARAM protocolFeeBps :", p.protocolFeeBps);
+        console2.log("DEPLOYED PaymentToken       :", paymentToken);
+        console2.log("DEPLOYED IdentityRegistry   :", identityRegistry);
+        console2.log("DEPLOYED ReputationRegistry :", reputationRegistry);
+        console2.log("DEPLOYED StakeVault         :", address(vault));
+        console2.log("DEPLOYED TaskEscrow         :", address(escrow));
+        console2.log("DEPLOYED AccountFactory     :", address(factory));
+        console2.log("");
+        console2.log("PARAM minStake    :", p.minStake);
+        console2.log("PARAM fastPathMax :", p.fastPathMax);
+        console2.log("PARAM feeBps      :", p.protocolFeeBps);
         console2.log("");
         console2.log("Next: node scripts/write-deployment.mjs <network-alias>");
     }
@@ -92,17 +127,31 @@ contract Deploy is Script {
         return address(token);
     }
 
-    /// @dev ERC-8004 is absent on Monad testnet (verified on-chain 2026-09-22).
-    ///      M1-00c adds the reference-registry deployment here.
-    function _reportErc8004(bool) internal view {
-        if (_netBool("erc8004.deployWithProtocol")) {
-            console2.log(
-                "erc8004: NOT deployed on this chain - M1-00c will deploy the reference impl"
-            );
-        } else {
-            console2.log("erc8004 identity  :", _netAddress("erc8004.identityRegistry"));
-            console2.log("erc8004 reputation:", _netAddress("erc8004.reputationRegistry"));
+    /// @dev ERC-8004 is live on Monad mainnet and ABSENT on testnet (verified
+    ///      on-chain 2026-09-22). Rather than branch in application code, the
+    ///      registries are deployed here where missing and adopted where
+    ///      present — the rest of the system cannot tell the difference.
+    function _resolveErc8004(bool isTestnet)
+        internal
+        returns (address identity, address reputation)
+    {
+        if (!_netBool("erc8004.deployWithProtocol")) {
+            identity = _netAddress("erc8004.identityRegistry");
+            reputation = _netAddress("erc8004.reputationRegistry");
+            require(identity.code.length > 0, "erc8004.identityRegistry has no code");
+            require(reputation.code.length > 0, "erc8004.reputationRegistry has no code");
+            console2.log("erc8004: adopting the canonical registries");
+            return (identity, reputation);
         }
+
+        // These are the reference registries, not a canonical deployment.
+        // Deploying them on a production chain would fragment the standard.
+        require(isTestnet, "refusing to deploy ERC-8004 registries on a non-testnet");
+
+        MockIdentityRegistry id = new MockIdentityRegistry();
+        MockReputationRegistry rep = new MockReputationRegistry(id);
+        console2.log("erc8004: deployed reference registries (absent on this chain)");
+        return (address(id), address(rep));
     }
 
     // ── config readers ───────────────────────────────────────────────────

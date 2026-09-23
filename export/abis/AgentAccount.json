@@ -10,6 +10,19 @@
   },
   {
     "type": "function",
+    "name": "MAX_SESSION_KEY_TTL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "allowedSelector",
     "inputs": [
       {
@@ -692,6 +705,22 @@
     "type": "error",
     "name": "SessionKeyExpired",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SessionKeyTtlInvalid",
+    "inputs": [
+      {
+        "name": "expiry",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "latestAllowed",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
   },
   {
     "type": "error",

@@ -9,11 +9,14 @@
     "MockReputationRegistry": "0x0ab928f0c62a8a357a5f18caa1c0847c3b1ba697",
     "StakeVault": "0x03d5429d352a98d1163a55ab97d733fbf534c322",
     "TaskEscrow": "0x1b0959dfd32323e5a4749d5444c2e6435349027c",
-    "AgentAccountFactory": "0x580f093c0f9568577e1776da13297c13ed7fd8b2",
+    "AgentAccountFactory": "0x51F75C30563d260FafF7dAB42ACf9fA57B82315D",
     "PaymentToken": "0x1640c8ea1353c615783c09da4c51fcb457684a64"
   },
   "erc8004": {
     "identityRegistry": "0x784b42fe1307c70e61df82288f9084614a0ce4c0",
     "reputationRegistry": "0x0ab928f0c62a8a357a5f18caa1c0847c3b1ba697"
-  }
+  },
+  "notes": [
+    "2026-09-23: AgentAccountFactory redeployed (was 0x580f093c0f9568577e1776da13297c13ed7fd8b2) to pick up AgentAccount.MAX_SESSION_KEY_TTL \u2014 a 24h ceiling on grantSessionKey, which docs/04 T7 claimed but nothing enforced. Deployed standalone: TaskEscrow and StakeVault do not reference the factory, so their addresses are unchanged."
+  ]
 }

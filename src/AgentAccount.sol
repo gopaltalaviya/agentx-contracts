@@ -37,6 +37,9 @@ contract AgentAccount is Initializable, ReentrancyGuard {
         bool allowlistOnly;
     }
 
+    /// @notice Longest life a session key may be granted, enforced on grant.
+    uint64 public constant MAX_SESSION_KEY_TTL = 1 days;
+
     struct SessionKey {
         uint64 expiry;
         uint128 budget;
@@ -71,6 +74,7 @@ contract AgentAccount is Initializable, ReentrancyGuard {
     error PerTaskCapExceeded(uint128 spend, uint128 cap);
     error DailyCapExceeded(uint128 spend, uint128 remaining);
     error SessionKeyExpired();
+    error SessionKeyTtlInvalid(uint64 expiry, uint64 latestAllowed);
     error SessionBudgetExceeded();
     error CallFailed(bytes returndata);
     error ApproveNotAllowedHere();
@@ -179,7 +183,21 @@ contract AgentAccount is Initializable, ReentrancyGuard {
 
     /// @notice Grant a hot key a bounded, expiring right to spend.
     /// @dev Rotation is a grant plus a revoke: no funds move, no downtime.
+    ///
+    ///      The lifetime ceiling is enforced HERE rather than left to whoever
+    ///      calls this. A session key exists so that compromise of an online
+    ///      signer is bounded in time; one granted until the heat death of the
+    ///      universe is a permanent key with extra steps, and a time bound that
+    ///      depends on the caller getting it right is not a control. The threat
+    ///      model (docs/04 §9.2 T7) claims this bound, so the contract makes it
+    ///      true.
+    ///
+    ///      A past expiry is rejected too: it would emit a grant event for a
+    ///      key that never worked, which reads as a working key in the log.
     function grantSessionKey(address key, uint64 expiry, uint128 budget) external onlyOwner {
+        uint64 latest = uint64(block.timestamp) + MAX_SESSION_KEY_TTL;
+        if (expiry <= block.timestamp || expiry > latest) revert SessionKeyTtlInvalid(expiry, latest);
+
         sessionKeys[key] = SessionKey({expiry: expiry, budget: budget, spent: 0});
         emit SessionKeyGranted(key, expiry, budget);
     }

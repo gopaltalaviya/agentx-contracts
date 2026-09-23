@@ -71,6 +71,65 @@ contract AgentAccountTest is BaseTest {
         vm.stopPrank();
     }
 
+    // ─────────────────── session key lifetime ───────────────────
+
+    /// @dev A session key exists so that compromise of an online signer is
+    ///      bounded IN TIME. One granted forever is a permanent key with extra
+    ///      steps, and a bound that relies on the caller passing the right
+    ///      number is not a control. T7 claims this; the contract enforces it.
+    function test_grantSessionKey_rejectsLifetimeBeyondTheCeiling() public {
+        uint64 tooLong = uint64(block.timestamp + 1 days + 1);
+        vm.prank(agentOwner);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AgentAccount.SessionKeyTtlInvalid.selector, tooLong, uint64(block.timestamp) + 1 days
+            )
+        );
+        account.grantSessionKey(attacker, tooLong, 1);
+    }
+
+    function test_grantSessionKey_rejectsAnEternalKey() public {
+        vm.prank(agentOwner);
+        vm.expectRevert();
+        account.grantSessionKey(attacker, type(uint64).max, 1);
+    }
+
+    /// @dev Exactly at the ceiling is allowed: an off-by-one here would make
+    ///      the documented 24h grant itself impossible.
+    function test_grantSessionKey_allowsExactlyTheCeiling() public {
+        vm.prank(agentOwner);
+        account.grantSessionKey(attacker, uint64(block.timestamp) + 1 days, 1);
+        (uint64 expiry,,) = account.sessionKeys(attacker);
+        assertEq(expiry, uint64(block.timestamp) + 1 days, "a 24h grant must be allowed");
+    }
+
+    /// @dev A grant that expired before it was made would emit a
+    ///      SessionKeyGranted event for a key that never worked, which reads
+    ///      in the log exactly like a working key.
+    function test_grantSessionKey_rejectsAnExpiryInThePast() public {
+        vm.warp(block.timestamp + 10 days);
+        vm.prank(agentOwner);
+        vm.expectRevert();
+        account.grantSessionKey(attacker, uint64(block.timestamp - 1), 1);
+    }
+
+    function test_grantSessionKey_rejectsTheCurrentTimestamp() public {
+        vm.prank(agentOwner);
+        vm.expectRevert();
+        account.grantSessionKey(attacker, uint64(block.timestamp), 1);
+    }
+
+    /// @dev Rotation must keep working: the ceiling constrains each grant, not
+    ///      the total life of a key that is re-granted daily.
+    function test_grantSessionKey_canBeRenewedAfterTheCeilingPasses() public {
+        vm.warp(block.timestamp + 2 days);
+        vm.prank(agentOwner);
+        account.grantSessionKey(sessionKey, uint64(block.timestamp) + 1 days, DAILY_CAP);
+
+        vm.prank(sessionKey);
+        account.execute(address(escrow), _payCall(10_000));
+    }
+
     function _payCall(uint128 amount) internal view returns (bytes memory) {
         return
             abi.encodeCall(

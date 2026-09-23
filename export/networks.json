@@ -5,8 +5,14 @@
     "shortName": "anvil",
     "foundryAlias": "anvil",
     "testnet": true,
-    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
-    "rpcUrls": ["http://127.0.0.1:8545"],
+    "nativeCurrency": {
+      "name": "Ether",
+      "symbol": "ETH",
+      "decimals": 18
+    },
+    "rpcUrls": [
+      "http://127.0.0.1:8545"
+    ],
     "blockExplorerUrls": [],
     "faucetUrls": [],
     "confirmations": 1,
@@ -20,19 +26,30 @@
       "deployWithProtocol": true,
       "identityRegistry": null,
       "reputationRegistry": null
-    }
+    },
+    "maxLogRange": 10000,
+    "maxLogRangeNote": "anvil has no limit; a large range just makes local replays fast."
   },
-
   "10143": {
     "chainId": 10143,
     "name": "Monad Testnet",
     "shortName": "monad-testnet",
     "foundryAlias": "monad_testnet",
     "testnet": true,
-    "nativeCurrency": { "name": "MON", "symbol": "MON", "decimals": 18 },
-    "rpcUrls": ["https://testnet-rpc.monad.xyz"],
-    "blockExplorerUrls": ["https://testnet.monadexplorer.com"],
-    "faucetUrls": ["https://faucet.monad.xyz"],
+    "nativeCurrency": {
+      "name": "MON",
+      "symbol": "MON",
+      "decimals": 18
+    },
+    "rpcUrls": [
+      "https://testnet-rpc.monad.xyz"
+    ],
+    "blockExplorerUrls": [
+      "https://testnet.monadexplorer.com"
+    ],
+    "faucetUrls": [
+      "https://faucet.monad.xyz"
+    ],
     "confirmations": 2,
     "paymentToken": {
       "symbol": "MockUSDC",
@@ -45,23 +62,31 @@
       "identityRegistry": null,
       "reputationRegistry": null,
       "note": "Verified 2026-09-22: ERC-8004 is NOT deployed on Monad testnet. We deploy the reference implementation ourselves; addresses land in deployments/10143.json."
-    }
+    },
+    "maxLogRange": 100,
+    "maxLogRangeNote": "Monad testnet RPC rejects eth_getLogs over 100 blocks. Found by running the indexer against it, not by reading docs."
   },
-
   "143": {
     "chainId": 143,
     "name": "Monad",
     "shortName": "monad",
     "foundryAlias": "monad",
     "testnet": false,
-    "nativeCurrency": { "name": "MON", "symbol": "MON", "decimals": 18 },
+    "nativeCurrency": {
+      "name": "MON",
+      "symbol": "MON",
+      "decimals": 18
+    },
     "rpcUrls": [
       "https://rpc.monad.xyz",
       "https://rpc1.monad.xyz",
       "https://rpc2.monad.xyz",
       "https://rpc3.monad.xyz"
     ],
-    "blockExplorerUrls": ["https://monadscan.com", "https://monadvision.com"],
+    "blockExplorerUrls": [
+      "https://monadscan.com",
+      "https://monadvision.com"
+    ],
     "faucetUrls": [],
     "confirmations": 5,
     "paymentToken": {
@@ -77,6 +102,8 @@
       "reputationRegistry": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
       "identityImplementationPinned": "0x7274e874ca62410a93bd8bf61c69d8045e399c02",
       "note": "Verified live 2026-09-22: ERC-721 name()='AgentIdentity', symbol()='AGENT'. ERC-1967 proxies - CI must check the implementation has not moved."
-    }
+    },
+    "maxLogRange": 100,
+    "maxLogRangeNote": "Assume the same 100-block cap as testnet until measured against mainnet."
   }
 }

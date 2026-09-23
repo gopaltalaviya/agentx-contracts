@@ -804,6 +804,12 @@
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
+      },
+      {
+        "name": "specHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -1300,6 +1306,22 @@
     "type": "error",
     "name": "SelfDealing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TokenDeliveredLess",
+    "inputs": [
+      {
+        "name": "asked",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "received",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

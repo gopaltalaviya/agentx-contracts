@@ -63,12 +63,17 @@ interface ITaskEscrow {
     event JobRefunded(uint256 indexed jobId, uint128 amount, bytes32 reason);
     event JobDisputed(uint256 indexed jobId, bytes32 reasonHash);
     event DisputeResolved(uint256 indexed jobId, bool forWorker);
+    /// @dev `specHash` is what lets an indexer match this payment to the job
+    ///      row that requested it. The on-chain id is assigned here, so the
+    ///      caller cannot have known it in advance — without the hash the
+    ///      fast path is unlinkable.
     event DirectPaid(
         uint256 indexed jobId,
         uint256 indexed clientAgentId,
         uint256 indexed workerAgentId,
         uint128 amount,
-        uint128 fee
+        uint128 fee,
+        bytes32 specHash
     );
     event FeedbackFailed(uint256 indexed jobId, uint256 indexed agentId);
 

@@ -10,4 +10,4 @@ import networks from './networks.json' with {type: 'json'};
 export {TaskEscrowAbi, StakeVaultAbi, AgentAccountAbi, AgentAccountFactoryAbi, MockUSDCAbi, MockIdentityRegistryAbi, MockReputationRegistryAbi};
 export {networks};
 
-export const deployedChainIds = [31337];
+export const deployedChainIds = [10143,31337];

@@ -65,6 +65,8 @@ contract TaskEscrow is ITaskEscrow, AccessControl, Pausable, ReentrancyGuard {
     error NotConfigured();
     error WindowTooLong();
     error FeeTooHigh();
+    /// @dev The token moved a different amount than it was asked to.
+    error TokenDeliveredLess(uint256 asked, uint256 received);
 
     /// @dev Only `admin`, so bytecode + args are identical on every network and
     ///      CREATE2 yields the same address. Parameters arrive via configure().
@@ -143,7 +145,17 @@ contract TaskEscrow is ITaskEscrow, AccessControl, Pausable, ReentrancyGuard {
         });
 
         lockedTotal += amount;
+
+        // Trust the balance, not the call. A fee-on-transfer or deflationary
+        // token delivers less than it was asked for, which would leave the
+        // escrow owing more than it holds — invariant I1, broken silently,
+        // with the shortfall only discovered when the last worker cannot be
+        // paid. The payment token is a governance parameter, but "we would
+        // never configure that" is not a security property.
+        uint256 received = token.balanceOf(address(this));
         token.safeTransferFrom(msg.sender, address(this), amount);
+        received = token.balanceOf(address(this)) - received;
+        if (received != amount) revert TokenDeliveredLess(amount, received);
 
         emit JobCreated(jobId, clientAgentId, workerAgentId, amount, fee, specHash, acceptDeadline);
     }
@@ -276,7 +288,7 @@ contract TaskEscrow is ITaskEscrow, AccessControl, Pausable, ReentrancyGuard {
         token.safeTransferFrom(msg.sender, identityRegistry.getAgentWallet(workerAgentId), paid);
         if (fee > 0) token.safeTransferFrom(msg.sender, feeRecipient, fee);
 
-        emit DirectPaid(jobId, clientAgentId, workerAgentId, amount, fee);
+        emit DirectPaid(jobId, clientAgentId, workerAgentId, amount, fee, specHash);
         emit JobSettled(jobId, paid, fee, Outcome.SUCCESS);
 
         _recordFeedback(jobId, workerAgentId, Outcome.SUCCESS, _jobs[jobId]);
@@ -362,6 +374,9 @@ contract TaskEscrow is ITaskEscrow, AccessControl, Pausable, ReentrancyGuard {
         // manufacture reputation for the cost of gas plus a fee.
         if (clientAgentId == workerAgentId) revert SelfDealing();
         if (identityRegistry.getAgentWallet(clientAgentId) != msg.sender) revert NotAgentWallet();
+        // An agent with no payout wallet can be hired but never paid: the job
+        // would take the client's money and be settleable only by refund.
+        if (identityRegistry.getAgentWallet(workerAgentId) == address(0)) revert NotHireable();
         if (!stakeVault.isHireable(workerAgentId)) revert NotHireable();
     }
 

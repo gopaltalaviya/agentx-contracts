@@ -41,6 +41,7 @@ contract StakeVault is IStakeVault, AccessControl, ReentrancyGuard {
     error AlreadyConfigured();
     error NotConfigured();
     error ZeroAmount();
+    error TokenDeliveredLess(uint256 asked, uint256 received);
 
     /// @dev Constructor takes only `admin` so bytecode and constructor args are
     ///      network-independent, which is what lets CREATE2 produce the same
@@ -70,8 +71,15 @@ contract StakeVault is IStakeVault, AccessControl, ReentrancyGuard {
         if (!configured) revert NotConfigured();
         if (amount == 0) revert ZeroAmount();
 
-        _bonds[agentId].available += amount;
+        // Credit only what arrived. Crediting the asked-for amount under a
+        // fee-on-transfer token would let one agent's bond be withdrawn out
+        // of another's deposit.
+        uint256 received = token.balanceOf(address(this));
         token.safeTransferFrom(msg.sender, address(this), amount);
+        received = token.balanceOf(address(this)) - received;
+        if (received != amount) revert TokenDeliveredLess(amount, received);
+
+        _bonds[agentId].available += amount;
         emit Deposited(agentId, msg.sender, amount);
     }
 

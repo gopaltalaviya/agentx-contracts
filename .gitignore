@@ -9,3 +9,6 @@ broadcast/
 .env.*
 !.env.example
 *.log
+
+# coverage output
+lcov.info

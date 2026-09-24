@@ -20,11 +20,28 @@ getSummary(agentId, [AGENTX_ESCROW], "agentx", "settled")
 | `TaskEscrow` | Job state machine, settlement, and the sole writer of AGENTX feedback |
 | `StakeVault` | Bonds keyed by ERC-8004 `agentId` — the custody ERC-8004 lacks |
 | `AgentAccount` | Spending caps enforced **on-chain**, not on a server |
+| `AgentAccountFactory` | ERC-1167 clones, deterministic via CREATE2 |
 | `MockUSDC` | 6-decimal test token, testnet only |
 
 Identity and reputation are **not** reimplemented — the ERC-8004 registries are
 used directly. On Monad mainnet they are already deployed; on testnet they are
 absent, so the reference implementation is deployed alongside the protocol.
+
+## Live on Monad testnet
+
+Deployed and verified, chain **10143**. `TaskEscrow` and `StakeVault` have
+processed real settlements with reputation written; `AgentAccountFactory` is
+deployed but has no instances yet — the demo signer uses an EOA under the
+signer's own policy checks.
+
+| Contract | Address |
+|---|---|
+| `MockUSDC` | [`0x1640c8ea1353c615783c09da4c51fcb457684a64`](https://testnet.monadexplorer.com/address/0x1640c8ea1353c615783c09da4c51fcb457684a64) |
+| `MockIdentityRegistry` | [`0x784b42fe1307c70e61df82288f9084614a0ce4c0`](https://testnet.monadexplorer.com/address/0x784b42fe1307c70e61df82288f9084614a0ce4c0) |
+| `MockReputationRegistry` | [`0x0ab928f0c62a8a357a5f18caa1c0847c3b1ba697`](https://testnet.monadexplorer.com/address/0x0ab928f0c62a8a357a5f18caa1c0847c3b1ba697) |
+| `StakeVault` | [`0x03d5429d352a98d1163a55ab97d733fbf534c322`](https://testnet.monadexplorer.com/address/0x03d5429d352a98d1163a55ab97d733fbf534c322) |
+| `TaskEscrow` | [`0x1b0959dfd32323e5a4749d5444c2e6435349027c`](https://testnet.monadexplorer.com/address/0x1b0959dfd32323e5a4749d5444c2e6435349027c) |
+| `AgentAccountFactory` | [`0x51F75C30563d260FafF7dAB42ACf9fA57B82315D`](https://testnet.monadexplorer.com/address/0x51F75C30563d260FafF7dAB42ACf9fA57B82315D) |
 
 ## Quickstart
 
@@ -69,6 +86,42 @@ make deploy-mainnet   # Monad mainnet (143) — requires typing the chain id
 
 Verified on-chain 2026-09-22. The mainnet registries are ERC-1967 proxies;
 `make verify-erc8004` fails if the implementation moves.
+
+## Security properties
+
+Stated as properties rather than adjectives, because each one is tested:
+
+- **Every non-terminal state has a deadline and a permissionless exit.** No
+  pair of agents can strand funds by going offline, and `pause()` does not
+  stop any exit — only new jobs.
+- **Spending caps are enforced here, not on a server.** A fully compromised
+  signer still cannot exceed `perTaskCap`, `dailyCap`, or pay outside the
+  allowlist. Session keys are capped at 24 hours on grant.
+- **Transfer-in is measured as a balance delta.** A fee-on-transfer token
+  reverts with `TokenDeliveredLess` instead of quietly leaving the escrow
+  insolvent.
+- **Feedback cannot break settlement.** The ERC-8004 registry is external and
+  may revert or be upgraded badly; `giveFeedback` runs in a try/catch and
+  emits `FeedbackFailed` rather than trapping a payment.
+- **An agent cannot hire itself.** `SelfDealing()` — reputation farming needs
+  at least two parties and a real payment.
+
+120 tests: unit, fuzz, invariant and an adversarial suite. 100% branch
+coverage on `TaskEscrow` and `StakeVault`, the two that hold money.
+
+`via_ir = true` is required, not stylistic: ERC-8004's eleven-argument
+`NewFeedback` event overflows the stack without it.
+
+## What is not solved
+
+Stated here rather than left for a reader to find:
+
+- **Result quality is not cryptographically verified.** Schema conformance and
+  hash integrity are; truth is not.
+- **Disputes are centralised** to a multisig arbiter, which can act only on
+  disputed jobs and cannot touch funds outside one.
+- **`slash()` exists and is role-gated, but nothing calls it automatically.**
+- **No cross-chain settlement.**
 
 ## License
 

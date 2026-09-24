@@ -17,8 +17,49 @@ const PATTERNS = [
   {name: 'Anthropic API key', re: /sk-ant-[A-Za-z0-9_-]{10,}/},
   {name: 'AWS access key id', re: /AKIA[0-9A-Z]{16}/},
   {name: 'PEM private key', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/},
-  {name: 'BIP-39 style mnemonic', re: /\b(?:[a-z]{3,8}\s+){11,}[a-z]{3,8}\b/},
 ];
+
+/**
+ * BIP-39 mnemonics, checked per line instead of with one loose regex.
+ *
+ * The obvious pattern — "twelve or more short lowercase words" — matches
+ * ordinary English. It fired on the sentence "bug in this project passed its
+ * unit tests and was caught only against the real", which is fourteen
+ * consecutive 3-to-8-letter words and not a secret.
+ *
+ * The false positive matters less than what it would have taught: a check
+ * that cries wolf on prose in every markdown file is a check people learn to
+ * pass with --no-verify, and the same hook is what guards the actual private
+ * keys.
+ *
+ * So this asks what a mnemonic really looks like — exactly 12, 15, 18, 21 or
+ * 24 lowercase words, space separated, alone on a line or alone inside a
+ * quoted or assigned value. Prose carries punctuation, capitals and words
+ * outside 3-8 letters, and a sentence almost never lands on exactly one of
+ * those five lengths with nothing else on the line.
+ */
+const MNEMONIC_LENGTHS = new Set([12, 15, 18, 21, 24]);
+
+function looksLikeMnemonic(text) {
+  for (const raw of text.split(/\r?\n/)) {
+    // Strip what would wrap a mnemonic in a config file: KEY=, quotes,
+    // brackets and markdown backticks. What remains must be only the words.
+    const line = raw
+      // The key may be quoted (`"mnemonic":` in JSON) or bare (`MNEMONIC=`).
+      .replace(/^\s*(?:["']?[A-Za-z_][A-Za-z0-9_]*["']?\s*[:=]\s*)?/, '')
+      .replace(/^[`'"[]+|[`'",\]]+$/g, '')
+      .trim();
+
+    if (!/^[a-z]+(?: [a-z]+)*$/.test(line)) continue;
+
+    const words = line.split(' ');
+    if (!MNEMONIC_LENGTHS.has(words.length)) continue;
+    if (words.some((w) => w.length < 3 || w.length > 8)) continue;
+
+    return true;
+  }
+  return false;
+}
 
 // Addresses, tx hashes and Solidity constants are 20- or 32-byte hex too, so
 // only scan files where a secret would actually be pasted.
@@ -33,13 +74,14 @@ for (const file of tracked) {
   // deployments/*.json holds addresses, never keys — and PROGRESS-style docs
   // legitimately quote hashes.
   const text = readFileSync(file, 'utf8');
+
+  // A keystore ciphertext is not a key, and lock files are noise.
+  if (file.includes('lock')) continue;
+
   for (const {name, re} of PATTERNS) {
-    const m = re.exec(text);
-    if (!m) continue;
-    // A keystore ciphertext is not a key, and lock files are noise.
-    if (file.includes('lock')) continue;
-    problems.push(`${file}: looks like a ${name}`);
+    if (re.test(text)) problems.push(`${file}: looks like a ${name}`);
   }
+  if (looksLikeMnemonic(text)) problems.push(`${file}: looks like a BIP-39 mnemonic`);
 }
 
 if (problems.length) {

@@ -71,6 +71,66 @@ contract AgentAccountTest is BaseTest {
         vm.stopPrank();
     }
 
+    // ─────────────────── access control ───────────────────
+
+    /// @dev Nothing tested this. `onlyOwner` showed as an uncovered branch in
+    ///      the coverage report, which means no test had ever called an
+    ///      owner-only function as a stranger — so removing the modifier from
+    ///      any of these six would not have failed a single test.
+    ///
+    ///      This is the contract that bounds a compromised agent. Its access
+    ///      control is the reason the bound holds.
+    function test_onlyOwner_strangerCannotSetPolicy() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.setPolicy(AgentAccount.Policy({perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false}));
+    }
+
+    function test_onlyOwner_strangerCannotGrantThemselvesASessionKey() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.grantSessionKey(attacker, uint64(block.timestamp) + 1 hours, type(uint128).max);
+    }
+
+    function test_onlyOwner_strangerCannotAllowlistATarget() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.setAllowedTarget(attacker, true);
+    }
+
+    function test_onlyOwner_strangerCannotAllowlistASelector() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.setAllowedSelector(bytes4(0xdeadbeef), true);
+    }
+
+    function test_onlyOwner_strangerCannotGrantAnAllowance() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.setAllowance(attacker, type(uint256).max);
+    }
+
+    /// @dev The one that would drain it outright.
+    function test_onlyOwner_strangerCannotSweepTheFunds() public {
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.sweep(attacker, 1);
+    }
+
+    /// @dev A live session key may SPEND within its budget, but it is not the
+    ///      owner: it must not be able to raise its own limits.
+    function test_onlyOwner_aSessionKeyCannotRaiseItsOwnCaps() public {
+        vm.prank(sessionKey);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.setPolicy(AgentAccount.Policy({perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false}));
+    }
+
+    function test_onlyOwner_aSessionKeyCannotSweep() public {
+        vm.prank(sessionKey);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.sweep(sessionKey, 1);
+    }
+
     // ─────────────────── session key lifetime ───────────────────
 
     /// @dev A session key exists so that compromise of an online signer is

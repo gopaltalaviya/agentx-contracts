@@ -32,7 +32,7 @@ jobs:
         run: forge test -vvv
 
       - name: Coverage
-        run: forge coverage --report summary
+        run: forge coverage --ir-minimum --report summary
 
       - name: Gas snapshot must not drift
         run: forge snapshot --check || (echo "::error::Gas changed. Run 'make snapshot' and commit .gas-snapshot." && exit 1)

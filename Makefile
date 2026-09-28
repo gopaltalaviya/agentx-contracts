@@ -36,8 +36,14 @@ test:
 test-ci:
 	FOUNDRY_PROFILE=ci forge test -vvv
 
+# --ir-minimum is REQUIRED, not a preference.
+#
+# forge coverage turns viaIR off for accurate line mapping, and this project
+# cannot compile without it — ERC-8004's 11-argument NewFeedback event blows
+# the stack. Without this flag the command fails with "Stack too deep", which
+# is what it had been doing here and in CI.
 coverage:
-	forge coverage --report summary
+	forge coverage --ir-minimum --report summary
 
 snapshot:
 	forge snapshot

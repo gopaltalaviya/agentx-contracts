@@ -44,6 +44,13 @@ anvil         = "http://127.0.0.1:8545"
 monad_testnet = "${RPC_URL_10143}"
 monad         = "${RPC_URL_143}"
 
+# Explorer verification.
+#
+# Every entry here is validated when forge starts, whichever verifier a
+# command actually asks for — so an entry without a `url` made EVERY
+# `forge verify-contract` fail with "No known Etherscan API URL for chain
+# 143", including ones explicitly passing --verifier sourcify. The URLs are
+# required, not optional.
 [etherscan]
-monad_testnet = { key = "${EXPLORER_API_KEY}", chain = 10143 }
-monad         = { key = "${EXPLORER_API_KEY}", chain = 143 }
+monad_testnet = { key = "${EXPLORER_API_KEY}", chain = 10143, url = "https://testnet.monadexplorer.com/api" }
+monad         = { key = "${EXPLORER_API_KEY}", chain = 143, url = "https://monadexplorer.com/api" }

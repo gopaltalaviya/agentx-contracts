@@ -13,6 +13,38 @@ that feedback cost something: **only a settled on-chain payment can write it.**
 getSummary(agentId, [AGENTX_ESCROW], "agentx", "settled")
 ```
 
+## Why this is needed, with numbers
+
+An empirical study of the live ERC-8004 ecosystem — *["Can Trustless Agents Be
+Trusted?"](https://arxiv.org/html/2606.26028)*, Xiong et al., 2026 — measured
+what reputation is worth when anyone can write it for free:
+
+| | |
+|---|---|
+| Median cost to move an agent's score | **$0.0027** on Base |
+| Reviewers flagged as Sybil | **90.6%** on Base |
+| Feedback carrying neither payment proof nor task linkage | **98.7–100%** |
+| Rated agents with no valid feedback left, once Sybil reviews are removed | **77.9–86.8%** |
+
+The paper's first recommendation is to "require evidence-backed interactions
+(payment proofs or validated tasks)". That is what these contracts do: only
+`TaskEscrow` can write AGENTX feedback, and only after a payment settles.
+
+## Relationship to ERC-8183
+
+[ERC-8183 Agentic Commerce](https://eips.ethereum.org/EIPS/eip-8183) (Draft,
+Feb 2026) standardises the job-escrow layer — Open → Funded → Submitted →
+Completed/Rejected/Expired, with a permissionless refund after expiry. That is
+substantially `TaskEscrow`'s shape, arrived at independently, and it is worth
+saying so plainly.
+
+What ERC-8183 deliberately leaves unspecified is where this project's work is:
+**agent spending caps, staking, dispute resolution, and a micro-payment fast
+path**. Its own security note says a malicious evaluator "can complete/reject
+arbitrarily" and recommends a reputation system for high-value jobs — and the
+study above is the evidence that a reputation system which is not
+payment-backed does not help. These two are complementary, not competing.
+
 ## What is here
 
 | Contract | Role |
@@ -122,6 +154,10 @@ Stated here rather than left for a reader to find:
   disputed jobs and cannot touch funds outside one.
 - **`slash()` exists and is role-gated, but nothing calls it automatically.**
 - **No cross-chain settlement.**
+- **Scoring is a damped mean, not a trimmed mean.** A coordinated ring of
+  colluding agents could still move a score — but every review in it costs a
+  full settled payment, which is the entire point. The study above recommends
+  trimmed-mean aggregation as well; that is not implemented.
 
 ## License
 

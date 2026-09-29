@@ -48,6 +48,10 @@ contract Deploy is Script {
         Params memory p = _readParams();
         bool isTestnet = _netBool("testnet");
         address admin = msg.sender;
+        // Both default to the deployer. `.env.example` has documented these
+        // two variables from the start, and until now nothing read them.
+        address feeRecipient = _envAddressOr("FEE_RECIPIENT", admin);
+        address arbiter = _envAddressOr("ARBITER_ADDRESS", admin);
 
         console2.log("=====================================");
         console2.log("AGENTX deploy");
@@ -55,6 +59,8 @@ contract Deploy is Script {
         console2.log("  chainId  :", chainId);
         console2.log("  testnet  :", isTestnet);
         console2.log("  admin    :", admin);
+        console2.log("  fees to  :", feeRecipient);
+        console2.log("  arbiter  :", arbiter);
         console2.log("=====================================");
 
         vm.startBroadcast();
@@ -71,7 +77,7 @@ contract Deploy is Script {
             identityRegistry,
             reputationRegistry,
             address(vault),
-            admin, // feeRecipient — C3, replace with the real address before mainnet
+            feeRecipient,
             TaskEscrow.Config({
                 fastPathMax: p.fastPathMax,
                 fastPathMinScore: p.fastPathMinScore,
@@ -84,6 +90,14 @@ contract Deploy is Script {
                 maxWorkWindow: p.workWindowSeconds * 10
             })
         );
+
+        // The constructor makes the admin the arbiter. A separate arbiter
+        // replaces it rather than joining it: two parties able to decide a
+        // dispute is one more than the design says.
+        if (arbiter != admin) {
+            escrow.grantRole(escrow.ARBITER_ROLE(), arbiter);
+            escrow.revokeRole(escrow.ARBITER_ROLE(), admin);
+        }
 
         AgentAccountFactory factory = new AgentAccountFactory(paymentToken);
 
@@ -188,5 +202,14 @@ contract Deploy is Script {
 
     function _netAddress(string memory path) internal view returns (address) {
         return vm.parseJsonAddress(networksJson, _key(path));
+    }
+
+    /// @dev `.env` sets unused variables to the empty string, which
+    ///      `vm.envOr(name, address)` cannot parse — so read a string and
+    ///      treat empty as unset.
+    function _envAddressOr(string memory name, address fallback_) internal view returns (address) {
+        string memory raw = vm.envOr(name, string(""));
+        if (bytes(raw).length == 0) return fallback_;
+        return vm.parseAddress(raw);
     }
 }

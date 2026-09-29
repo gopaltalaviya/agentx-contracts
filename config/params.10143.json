@@ -8,5 +8,7 @@
   "acceptWindowSeconds": 300,
   "workWindowSeconds": 1800,
   "reviewWindowSeconds": 600,
-  "confidenceFloor": 25
+  "confidenceFloor": 25,
+  "defaultPerTaskCap": "100000",
+  "defaultDailyCap": "1000000"
 }

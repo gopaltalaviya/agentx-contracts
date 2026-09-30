@@ -180,6 +180,12 @@ Stated here rather than left for a reader to find:
   which can act only on disputed jobs and only until the dispute times out.
 - **`slash()` exists and is role-gated, but nothing calls it automatically.**
 - **No cross-chain settlement.**
+- **Not externally audited.** 184 tests (unit, fuzz, three invariant suites,
+  adversarial), Slither and solhint in CI, and an internal audit
+  ([SECURITY.md](SECURITY.md)) — but no third-party audit. One reason this is
+  testnet-only.
+- **Source not yet verified on the explorer** — it needs an `EXPLORER_API_KEY`
+  (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 - **Scoring is a damped mean, not a trimmed mean.** A coordinated ring of
   colluding agents could still move a score — but every review in it costs a
   full settled payment, which is the entire point. The study above recommends

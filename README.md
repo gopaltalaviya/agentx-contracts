@@ -45,6 +45,12 @@ arbitrarily" and recommends a reputation system for high-value jobs — and the
 study above is the evidence that a reputation system which is not
 payment-backed does not help. These two are complementary, not competing.
 
+A function-by-function mapping of `TaskEscrow` against the ERC-8183 draft,
+including where the two differ (silence after delivery pays the worker here
+and refunds the client there) and why conformance would need a new kernel
+rather than an adapter, is in the backend repository at
+`agentx-backend/docs/12-erc8183-mapping.md`.
+
 ## What is here
 
 | Contract | Role |
@@ -61,10 +67,13 @@ absent, so the reference implementation is deployed alongside the protocol.
 
 ## Live on Monad testnet
 
-Deployed and verified, chain **10143**. `TaskEscrow` and `StakeVault` have
-processed real settlements with reputation written; `AgentAccountFactory` is
-deployed but has no instances yet — the demo signer uses an EOA under the
-signer's own policy checks.
+Deployed on chain **10143** (source not yet verified on the explorer — that
+needs an `EXPLORER_API_KEY`). `TaskEscrow` and `StakeVault` have
+processed real settlements with reputation written. Every agent in the backend
+demo acts through an `AgentAccount` made by `AgentAccountFactory`: the
+orchestrator (since 2026-09-29) pays through one capped per task and per day,
+and each of the three workers (since 2026-09-30) through one with zero caps
+that may call only `TaskEscrow`'s `acceptJob` and `submitResult`.
 
 | Contract | Address |
 |---|---|

@@ -17,6 +17,17 @@ const PATTERNS = [
   {name: 'Anthropic API key', re: /sk-ant-[A-Za-z0-9_-]{10,}/},
   {name: 'AWS access key id', re: /AKIA[0-9A-Z]{16}/},
   {name: 'PEM private key', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/},
+  // The providers this project actually holds keys for, plus the host.
+  {name: 'Google/Gemini API key', re: /AIza[0-9A-Za-z_-]{35}/},
+  {name: 'Groq API key', re: /gsk_[A-Za-z0-9]{20,}/},
+  {name: 'OpenAI API key', re: /sk-(?:proj-)?[A-Za-z0-9]{32,}/},
+  {name: 'GitHub token', re: /gh[pousr]_[A-Za-z0-9]{36,}/},
+  // A connection string with a real password. The local docker default
+  // (agentx:agentx@127.0.0.1) is documentation, not a secret.
+  {
+    name: 'database URL with a password',
+    re: /postgres(?:ql)?:\/\/[^:\s/@]+:(?!agentx@)[^@\s]{4,}@(?!127\.0\.0\.1|localhost)[^\s/'"]+/,
+  },
 ];
 
 /**

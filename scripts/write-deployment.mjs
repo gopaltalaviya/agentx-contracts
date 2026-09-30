@@ -111,9 +111,18 @@ try {
   // Not a git repo yet — fine. The field records provenance when available.
 }
 
+/** Forge's run timestamp, in ms whether it was written in s or ms. */
+function toMillis(ts) {
+  const n = Number(ts);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n > 1e12 ? n : n * 1000;
+}
+
 const out = {
   chainId,
-  deployedAt: new Date(Number(run.timestamp) * 1000 || Date.now()).toISOString(),
+  // Forge writes `timestamp` in MILLISECONDS. Multiplying it by 1000 again
+  // dated both deployments in the year 58698.
+  deployedAt: new Date(toMillis(run.timestamp) ?? Date.now()).toISOString(),
   commit,
   startBlock: minBlock,
   contracts,

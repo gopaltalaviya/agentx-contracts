@@ -108,7 +108,11 @@ for (const f of paramFiles) {
   if (p.fastPathMinScore < 0 || p.fastPathMinScore > 100) {
     fail(`${f}: fastPathMinScore must be 0..100`);
   }
-  for (const k of ['acceptWindowSeconds', 'workWindowSeconds', 'reviewWindowSeconds']) {
+  if (big('minJobAmount') <= 0n) fail(`${f}: minJobAmount must be > 0 — dust would buy reviews`);
+  if (big('minFee') >= big('minJobAmount')) fail(`${f}: minFee must be below minJobAmount`);
+  if (big('fastPathMax') < big('minJobAmount')) fail(`${f}: fastPathMax below minJobAmount — no fast-path job could exist`);
+  if (!(p.adminDelaySeconds > 0)) fail(`${f}: adminDelaySeconds must be > 0`);
+  for (const k of ['acceptWindowSeconds', 'workWindowSeconds', 'reviewWindowSeconds', 'disputeTimeoutSeconds']) {
     if (!(p[k] > 0)) fail(`${f}: ${k} must be > 0 — a zero window traps funds`);
   }
   if (p.confidenceFloor < 1) fail(`${f}: confidenceFloor must be >= 1`);
@@ -118,6 +122,12 @@ for (const f of paramFiles) {
   if (isTestnet === false) {
     if (p.reviewWindowSeconds < 3600) {
       fail(`${f}: mainnet reviewWindowSeconds ${p.reviewWindowSeconds} < 3600 — too short to dispute`);
+    }
+    if (p.disputeTimeoutSeconds < 86400) {
+      fail(`${f}: mainnet disputeTimeoutSeconds ${p.disputeTimeoutSeconds} < 1 day — too short for an arbiter`);
+    }
+    if (p.adminDelaySeconds < 86400) {
+      fail(`${f}: mainnet adminDelaySeconds ${p.adminDelaySeconds} < 1 day`);
     }
     if (big('minStake') < 100_000_000n) {
       fail(`${f}: mainnet minStake below 100 USDC — sybil resistance too weak`);

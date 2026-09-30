@@ -77,8 +77,22 @@ try {
     call(vault, SELECTOR.minStake).then((r) => words(r)[0]),
     call(vault, SELECTOR.withdrawDelay).then((r) => words(r)[0]),
   ]);
-  const [fastPathMax, fastPathMinScore, protocolFeeBps, reviewWindow, maxAcceptWindow, maxWorkWindow] = config;
-  onChain = {fastPathMax, fastPathMinScore, protocolFeeBps, reviewWindow, maxAcceptWindow, maxWorkWindow, minStake, withdrawDelay};
+  // TaskEscrow v2 Config, in declaration order. fastPathMinScore is no longer
+  // on chain — it is API policy, read from the params file.
+  const [fastPathMax, minJobAmount, minFee, protocolFeeBps, reviewWindow, maxAcceptWindow, maxWorkWindow, disputeTimeout] =
+    config;
+  onChain = {
+    fastPathMax,
+    minJobAmount,
+    minFee,
+    protocolFeeBps,
+    reviewWindow,
+    maxAcceptWindow,
+    maxWorkWindow,
+    disputeTimeout,
+    minStake,
+    withdrawDelay,
+  };
 } catch (err) {
   console.error(`could not read the deployed contracts on ${entry.name}: ${err.message}`);
   process.exit(2);
@@ -87,11 +101,13 @@ try {
 // Deployed name → the value Deploy.s.sol derived it from.
 const expected = {
   fastPathMax: BigInt(params.fastPathMax),
-  fastPathMinScore: BigInt(params.fastPathMinScore),
+  minJobAmount: BigInt(params.minJobAmount),
+  minFee: BigInt(params.minFee),
   protocolFeeBps: BigInt(params.protocolFeeBps),
   reviewWindow: BigInt(params.reviewWindowSeconds),
   maxAcceptWindow: BigInt(params.acceptWindowSeconds) * 10n,
   maxWorkWindow: BigInt(params.workWindowSeconds) * 10n,
+  disputeTimeout: BigInt(params.disputeTimeoutSeconds),
   minStake: BigInt(params.minStake),
   withdrawDelay: BigInt(params.withdrawDelaySeconds),
 };

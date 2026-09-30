@@ -1,4 +1,4 @@
-.PHONY: help install build test test-ci coverage snapshot fmt lint drift export \
+.PHONY: help install build test test-ci coverage snapshot snapshot-check fmt lint drift export \
         deploy deploy-local deploy-testnet deploy-mainnet verify-erc8004 publish clean
 
 # Network alias from foundry.toml [rpc_endpoints]. One deploy target,
@@ -23,9 +23,10 @@ help:
 	@echo "  make deploy-testnet   -> Monad testnet (10143)"
 	@echo "  make deploy-mainnet   -> Monad mainnet (143), requires confirmation"
 
+# The libraries are git submodules pinned to exact commits (forge-std v1.9.4,
+# OpenZeppelin v5.0.2). `forge install --no-git` ignored those pins.
 install:
-	forge install foundry-rs/forge-std --no-git
-	forge install OpenZeppelin/openzeppelin-contracts --no-git
+	git submodule update --init --recursive
 
 build:
 	forge build
@@ -43,16 +44,25 @@ test-ci:
 # the stack. Without this flag the command fails with "Stack too deep", which
 # is what it had been doing here and in CI.
 coverage:
-	forge coverage --ir-minimum --report summary
+	forge coverage --ir-minimum --report summary --report lcov
+	node scripts/check-coverage.mjs lcov.info
+
+# Deterministic tests only: fuzz and invariant gas varies with the seed.
+SNAPSHOT_FILTER = --no-match-test "testFuzz|invariant" --no-match-path "test/invariant/*"
 
 snapshot:
-	forge snapshot
+	forge snapshot $(SNAPSHOT_FILTER)
+
+snapshot-check:
+	forge snapshot --check $(SNAPSHOT_FILTER)
 
 fmt:
 	forge fmt
 
 lint:
 	forge fmt --check
+	npx --yes solhint@5.0.5 "src/**/*.sol"
+	slither . --config-file slither.config.json --fail-medium
 
 secrets:
 	node scripts/check-no-secrets.mjs

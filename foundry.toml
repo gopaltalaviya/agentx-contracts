@@ -8,7 +8,8 @@ solc_version   = "0.8.26"
 optimizer      = true
 optimizer_runs = 200
 via_ir         = true   # ERC-8004's 11-arg NewFeedback event overflows the stack without it
-bytecode_hash  = "none"        # deterministic bytecode -> CREATE2 gives the same address on every chain
+bytecode_hash  = "none"        # no metadata hash: the bytecode depends on the source alone
+evm_version    = "cancun"      # pinned, not inherited from the compiler default
 
 # Deploy.s.sol reads config/ and writes deployments/
 fs_permissions = [

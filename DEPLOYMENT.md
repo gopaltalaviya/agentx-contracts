@@ -43,6 +43,9 @@ Every step is a command or a check with an expected result. Nothing here is
       and `StakeVault`, wait `adminDelaySeconds`, `acceptDefaultAdminTransfer`
       from the multisig. Move `ARBITER_ROLE` and `CONFIGURER_ROLE` to the
       multisig and renounce them from the deployer.
+- [ ] Backend: `node scripts/sync-chain-facts.mjs` in `agentx-backend` and
+      commit `chain/` — the hosted images carry that copy, not this repo, and
+      the backend's CI fails until it matches.
 - [ ] Backend: reset the indexer cursor for the chain (new `startBlock`), run
       the migrations, and run `scripts/e2e.mjs` and `scripts/verify-indexer.mjs`
       against the new addresses.

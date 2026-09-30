@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {StakeVault} from "../src/StakeVault.sol";
 import {TaskEscrow} from "../src/TaskEscrow.sol";
@@ -19,6 +19,7 @@ abstract contract BaseTest is Test {
 
     address internal admin = makeAddr("admin");
     address internal feeRecipient = makeAddr("feeRecipient");
+    address internal slashRecipient = makeAddr("slashRecipient");
 
     address internal clientOwner = makeAddr("clientOwner");
     address internal clientWallet = makeAddr("clientWallet");
@@ -37,6 +38,10 @@ abstract contract BaseTest is Test {
     uint64 internal constant ACCEPT_WINDOW = 60;
     uint64 internal constant WORK_WINDOW = 120;
     uint64 internal constant REVIEW_WINDOW = 60;
+    uint128 internal constant MIN_JOB_AMOUNT = 10_000; // 0.01 USDC
+    uint128 internal constant MIN_FEE = 100; // 0.0001 USDC
+    uint64 internal constant DISPUTE_TIMEOUT = 1 hours;
+    uint48 internal constant ADMIN_DELAY = 1 days;
 
     uint128 internal constant PRICE = 50_000; // 0.05 USDC — escrow path
     uint128 internal constant MICRO = 20_000; // 0.02 USDC — fast path
@@ -47,24 +52,19 @@ abstract contract BaseTest is Test {
         reputation = new MockReputationRegistry(identity);
 
         vm.startPrank(admin);
-        vault = new StakeVault(admin);
-        escrow = new TaskEscrow(admin);
+        vault = new StakeVault(admin, ADMIN_DELAY);
+        escrow = new TaskEscrow(admin, ADMIN_DELAY);
 
-        vault.configure(address(token), address(identity), MIN_STAKE, WITHDRAW_DELAY);
+        vault.configure(
+            address(token), address(identity), MIN_STAKE, WITHDRAW_DELAY, slashRecipient
+        );
         escrow.configure(
             address(token),
             address(identity),
             address(reputation),
             address(vault),
             feeRecipient,
-            TaskEscrow.Config({
-                fastPathMax: FAST_PATH_MAX,
-                fastPathMinScore: 70,
-                protocolFeeBps: FEE_BPS,
-                reviewWindow: REVIEW_WINDOW,
-                maxAcceptWindow: 1 days,
-                maxWorkWindow: 7 days
-            })
+            _config()
         );
         vm.stopPrank();
 
@@ -111,8 +111,33 @@ abstract contract BaseTest is Test {
         escrow.submitResult(jobId, keccak256("result"), "ipfs://result");
     }
 
-    function _feeOf(uint128 amount) internal pure returns (uint128) {
-        return uint128((uint256(amount) * FEE_BPS) / 10_000);
+    /// @dev The deployed parameters, for tests to take and adjust one field of.
+    function _config() internal pure returns (TaskEscrow.Config memory) {
+        return TaskEscrow.Config({
+            fastPathMax: FAST_PATH_MAX,
+            minJobAmount: MIN_JOB_AMOUNT,
+            minFee: MIN_FEE,
+            protocolFeeBps: FEE_BPS,
+            reviewWindow: REVIEW_WINDOW,
+            maxAcceptWindow: 1 days,
+            maxWorkWindow: 7 days,
+            disputeTimeout: DISPUTE_TIMEOUT
+        });
+    }
+
+    function _cfgWith(uint128 fastPathMax, uint16 feeBps)
+        internal
+        pure
+        returns (TaskEscrow.Config memory c)
+    {
+        c = _config();
+        c.fastPathMax = fastPathMax;
+        c.protocolFeeBps = feeBps;
+    }
+
+    function _feeOf(uint128 amount) internal pure returns (uint128 fee) {
+        fee = uint128((uint256(amount) * FEE_BPS) / 10_000);
+        if (fee < MIN_FEE) fee = MIN_FEE;
     }
 
     function _settledCount(uint256 agentId) internal view returns (uint64 count) {

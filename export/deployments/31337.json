@@ -1,19 +1,19 @@
 {
   "chainId": 31337,
-  "deployedAt": "+058697-07-02T03:16:05.000Z",
-  "commit": "be2efae",
-  "startBlock": 4,
+  "deployedAt": "2026-09-30T06:45:36.342Z",
+  "commit": "2015ea5",
+  "startBlock": 1,
   "contracts": {
-    "MockUSDC": "0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6",
-    "MockIdentityRegistry": "0x8a791620dd6260079bf849dc5567adc3f2fdc318",
-    "MockReputationRegistry": "0x610178da211fef7d417bc0e6fed39f05609ad788",
-    "StakeVault": "0xb7f8bc63bbcad18155201308c8f3540b07f84f5e",
-    "TaskEscrow": "0x0dcd1bf9a1b36ce34237eeafef220932846bcd82",
-    "AgentAccountFactory": "0x0b306bf915c4d645ff596e518faf3f9669b97016",
-    "PaymentToken": "0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6"
+    "MockUSDC": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "MockIdentityRegistry": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "MockReputationRegistry": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "StakeVault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+    "TaskEscrow": "0x5fc8d32690cc91d4c39d9d3abcbd16989f875707",
+    "AgentAccountFactory": "0xa513e6e4b8f2a923d98304ec87f64353c4d5c853",
+    "PaymentToken": "0x5fbdb2315678afecb367f032d93f642f64180aa3"
   },
   "erc8004": {
-    "identityRegistry": "0x8a791620dd6260079bf849dc5567adc3f2fdc318",
-    "reputationRegistry": "0x610178da211fef7d417bc0e6fed39f05609ad788"
+    "identityRegistry": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "reputationRegistry": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
   }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {TaskEscrow} from "../../src/TaskEscrow.sol";
 import {ITaskEscrow} from "../../src/interfaces/ITaskEscrow.sol";
@@ -343,7 +343,7 @@ contract TaskEscrowTest is BaseTest {
     // ───────────────────────── fees (I4) ─────────────────────────
 
     function testFuzz_paidPlusFeeAlwaysEqualsAmount(uint128 amount) public {
-        amount = uint128(bound(amount, 1, 1_000_000_000));
+        amount = uint128(bound(amount, MIN_JOB_AMOUNT, 1_000_000_000));
         token.mint(clientWallet, amount);
 
         vm.prank(clientWallet);
@@ -353,8 +353,10 @@ contract TaskEscrowTest is BaseTest {
 
         ITaskEscrow.Job memory job = escrow.getJob(jobId);
         assertEq(job.amount, job.fee + (job.amount - job.fee), "no value created or destroyed");
-        // Rounds down, so the remainder favours the worker, never the protocol.
-        assertLe(uint256(job.fee) * 10_000, uint256(amount) * FEE_BPS);
+        // The percentage rounds down, then the floor applies — and the worker
+        // is always paid something.
+        assertEq(job.fee, _feeOf(amount), "fee is max(bps, minFee)");
+        assertLt(job.fee, amount, "the fee never takes the whole payment");
     }
 
     function test_feeChangeCannotAlterAnInFlightJob() public {
@@ -363,14 +365,7 @@ contract TaskEscrowTest is BaseTest {
 
         vm.prank(admin);
         escrow.setParams(
-            TaskEscrow.Config({
-                fastPathMax: FAST_PATH_MAX,
-                fastPathMinScore: 70,
-                protocolFeeBps: 1000, // 10x increase
-                reviewWindow: REVIEW_WINDOW,
-                maxAcceptWindow: 1 days,
-                maxWorkWindow: 7 days
-            }),
+            _cfgWith(FAST_PATH_MAX, 1000), // 10x increase
             feeRecipient
         );
 

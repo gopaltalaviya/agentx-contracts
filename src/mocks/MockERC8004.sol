@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 /// @title Minimal ERC-8004 registries for tests and for testnet deployment
 /// @notice Mirrors the behaviour of `erc-8004/erc-8004-contracts@master` that
@@ -19,6 +19,9 @@ contract MockIdentityRegistry {
     mapping(uint256 => mapping(address => bool)) internal _operator;
     mapping(uint256 => mapping(string => bytes)) internal _metadata;
     uint256 public nextId = 1;
+    /// @notice When set, `getAgentWallet` reverts — an upgraded or broken
+    ///         registry. Used to prove a settlement can never be trapped by it.
+    bool public walletShouldRevert;
 
     event Registered(uint256 indexed agentId, string agentURI, address indexed owner);
 
@@ -44,7 +47,12 @@ contract MockIdentityRegistry {
     }
 
     function getAgentWallet(uint256 agentId) external view returns (address) {
+        require(!walletShouldRevert, "registry unavailable");
         return _wallet[agentId];
+    }
+
+    function setWalletShouldRevert(bool v) external {
+        walletShouldRevert = v;
     }
 
     function setAgentWallet(uint256 agentId, address wallet) external {
@@ -178,6 +186,8 @@ contract MockReputationRegistry {
             }
         }
 
+        // Safe: a mean of int128 values is within int128.
+        // forge-lint: disable-next-line(unsafe-typecast)
         summaryValue = count == 0 ? int128(0) : int128(sum / int256(uint256(count)));
         summaryValueDecimals = 0;
     }

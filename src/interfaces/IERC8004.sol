@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 /// @title ERC-8004 Trustless Agents — the subset AGENTX depends on
 /// @notice External registries. AGENTX does NOT implement these; it reads the

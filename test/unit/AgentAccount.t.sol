@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {AgentAccount} from "../../src/AgentAccount.sol";
 import {AgentAccountFactory} from "../../src/AgentAccountFactory.sol";
@@ -29,21 +29,12 @@ contract AgentAccountTest is BaseTest {
         // ceiling must be raised out of the way — otherwise directPay rejects
         // first and the account limits are never reached.
         vm.prank(admin);
-        escrow.setParams(
-            TaskEscrow.Config({
-                fastPathMax: 1_000_000,
-                fastPathMinScore: 70,
-                protocolFeeBps: FEE_BPS,
-                reviewWindow: REVIEW_WINDOW,
-                maxAcceptWindow: 1 days,
-                maxWorkWindow: 7 days
-            }),
-            feeRecipient
-        );
+        escrow.setParams(_cfgWith(1_000_000, FEE_BPS), feeRecipient);
 
         factory = new AgentAccountFactory(address(token));
         address predicted = factory.predictAddress(agentOwner, bytes32("agent-1"));
 
+        vm.prank(agentOwner); // only the owner may create their account (M6)
         account = AgentAccount(
             payable(factory.createAccount(
                     agentOwner,
@@ -63,9 +54,8 @@ contract AgentAccountTest is BaseTest {
         token.mint(address(account), 10_000_000);
 
         vm.startPrank(agentOwner);
-        account.setAllowedTarget(address(escrow), true);
-        account.setAllowedSelector(TaskEscrow.directPay.selector, true);
-        account.setAllowedSelector(TaskEscrow.createJob.selector, true);
+        account.setAllowedCall(address(escrow), TaskEscrow.directPay.selector, true);
+        account.setAllowedCall(address(escrow), TaskEscrow.createJob.selector, true);
         account.setAllowance(address(escrow), type(uint256).max);
         account.grantSessionKey(sessionKey, uint64(block.timestamp + 1 days), DAILY_CAP);
         vm.stopPrank();
@@ -83,7 +73,11 @@ contract AgentAccountTest is BaseTest {
     function test_onlyOwner_strangerCannotSetPolicy() public {
         vm.prank(attacker);
         vm.expectRevert(AgentAccount.NotOwner.selector);
-        account.setPolicy(AgentAccount.Policy({perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false}));
+        account.setPolicy(
+            AgentAccount.Policy({
+                perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false
+            })
+        );
     }
 
     function test_onlyOwner_strangerCannotGrantThemselvesASessionKey() public {
@@ -92,16 +86,10 @@ contract AgentAccountTest is BaseTest {
         account.grantSessionKey(attacker, uint64(block.timestamp) + 1 hours, type(uint128).max);
     }
 
-    function test_onlyOwner_strangerCannotAllowlistATarget() public {
+    function test_onlyOwner_strangerCannotAllowlistACall() public {
         vm.prank(attacker);
         vm.expectRevert(AgentAccount.NotOwner.selector);
-        account.setAllowedTarget(attacker, true);
-    }
-
-    function test_onlyOwner_strangerCannotAllowlistASelector() public {
-        vm.prank(attacker);
-        vm.expectRevert(AgentAccount.NotOwner.selector);
-        account.setAllowedSelector(bytes4(0xdeadbeef), true);
+        account.setAllowedCall(attacker, bytes4(0xdeadbeef), true);
     }
 
     function test_onlyOwner_strangerCannotGrantAnAllowance() public {
@@ -122,7 +110,11 @@ contract AgentAccountTest is BaseTest {
     function test_onlyOwner_aSessionKeyCannotRaiseItsOwnCaps() public {
         vm.prank(sessionKey);
         vm.expectRevert(AgentAccount.NotOwner.selector);
-        account.setPolicy(AgentAccount.Policy({perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false}));
+        account.setPolicy(
+            AgentAccount.Policy({
+                perTaskCap: type(uint128).max, dailyCap: type(uint128).max, allowlistOnly: false
+            })
+        );
     }
 
     function test_onlyOwner_aSessionKeyCannotSweep() public {
@@ -142,7 +134,9 @@ contract AgentAccountTest is BaseTest {
         vm.prank(agentOwner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                AgentAccount.SessionKeyTtlInvalid.selector, tooLong, uint64(block.timestamp) + 1 days
+                AgentAccount.SessionKeyTtlInvalid.selector,
+                tooLong,
+                uint64(block.timestamp) + 1 days
             )
         );
         account.grantSessionKey(attacker, tooLong, 1);
@@ -284,8 +278,9 @@ contract AgentAccountTest is BaseTest {
     }
 
     function test_nonAllowlistedSelectorRejected() public {
+        // The token is an allowed target — for reading its balance only.
         vm.prank(agentOwner);
-        account.setAllowedTarget(address(token), true);
+        account.setAllowedCall(address(token), IERC20.balanceOf.selector, true);
 
         vm.prank(sessionKey);
         vm.expectRevert(
@@ -300,8 +295,83 @@ contract AgentAccountTest is BaseTest {
     ///      cap, so it must be unreachable from the session-key path.
     function test_approveCanNeverBeGrantedThroughExecute() public {
         vm.prank(agentOwner);
-        vm.expectRevert(AgentAccount.ApproveNotAllowedHere.selector);
-        account.setAllowedSelector(IERC20.approve.selector, true);
+        vm.expectRevert(
+            abi.encodeWithSelector(AgentAccount.ForbiddenSelector.selector, IERC20.approve.selector)
+        );
+        account.setAllowedCall(address(token), IERC20.approve.selector, true);
+    }
+
+    /// @dev Every selector that grants a standing allowance, not only `approve`:
+    ///      real USDC has `increaseAllowance`, and v1 would have allowed it.
+    function test_noAllowanceGrantingSelectorCanBeAllowed() public {
+        bytes4[3] memory forbidden = [bytes4(0x39509351), bytes4(0xa22cb465), bytes4(0xd505accf)];
+        for (uint256 i; i < forbidden.length; i++) {
+            vm.prank(agentOwner);
+            vm.expectRevert(
+                abi.encodeWithSelector(AgentAccount.ForbiddenSelector.selector, forbidden[i])
+            );
+            account.setAllowedCall(address(token), forbidden[i], true);
+        }
+    }
+
+    /// @dev The account's own owner-only functions must not become reachable
+    ///      by a session key through `execute`.
+    function test_theAccountCannotBeATargetOfItsOwnExecute() public {
+        vm.prank(agentOwner);
+        vm.expectRevert(
+            abi.encodeWithSelector(AgentAccount.TargetNotAllowed.selector, address(account))
+        );
+        account.setAllowedCall(address(account), AgentAccount.sweep.selector, true);
+
+        vm.prank(sessionKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(AgentAccount.TargetNotAllowed.selector, address(account))
+        );
+        account.execute(address(account), abi.encodeCall(AgentAccount.sweep, (attacker, 1)));
+    }
+
+    // ─────────────────── v2: owner controls ───────────────────
+
+    function test_sweepNativeRecoversTheNativeCoin() public {
+        vm.deal(address(account), 1 ether);
+        address payable to = payable(makeAddr("rescue"));
+        vm.prank(agentOwner);
+        account.sweepNative(to, 1 ether);
+        assertEq(to.balance, 1 ether);
+
+        vm.deal(address(account), 1 ether);
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.sweepNative(payable(attacker), 1 ether);
+    }
+
+    function test_ownershipTransferTakesTwoSteps() public {
+        address next = makeAddr("nextOwner");
+        vm.prank(agentOwner);
+        account.transferOwnership(next);
+        assertEq(account.owner(), agentOwner, "nothing changes until accepted");
+
+        vm.prank(attacker);
+        vm.expectRevert(AgentAccount.NotOwner.selector);
+        account.acceptOwnership();
+
+        vm.prank(next);
+        account.acceptOwnership();
+        assertEq(account.owner(), next);
+        assertEq(account.pendingOwner(), address(0));
+    }
+
+    function test_disallowingACallTakesEffect() public {
+        vm.prank(agentOwner);
+        account.setAllowedCall(address(escrow), TaskEscrow.directPay.selector, false);
+
+        vm.prank(sessionKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AgentAccount.SelectorNotAllowed.selector, TaskEscrow.directPay.selector
+            )
+        );
+        account.execute(address(escrow), _payCall(MICRO));
     }
 
     function test_sessionKeyBudgetIsIndependentOfTheDailyCap() public {

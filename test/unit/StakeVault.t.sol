@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {IStakeVault} from "../../src/interfaces/IStakeVault.sol";
 import {BaseTest} from "../Base.t.sol";

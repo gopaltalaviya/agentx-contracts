@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {StakeVault} from "../../src/StakeVault.sol";
 import {TaskEscrow} from "../../src/TaskEscrow.sol";
@@ -90,24 +90,17 @@ contract AdversarialTest is BaseTest {
     function test_feeOnTransferTokenCannotMakeTheEscrowInsolvent() public {
         FeeOnTransferToken fot = new FeeOnTransferToken();
 
-        TaskEscrow e = new TaskEscrow(admin);
-        StakeVault v = new StakeVault(admin);
+        TaskEscrow e = new TaskEscrow(admin, ADMIN_DELAY);
+        StakeVault v = new StakeVault(admin, ADMIN_DELAY);
         vm.startPrank(admin);
-        v.configure(address(fot), address(identity), MIN_STAKE, WITHDRAW_DELAY);
+        v.configure(address(fot), address(identity), MIN_STAKE, WITHDRAW_DELAY, slashRecipient);
         e.configure(
             address(fot),
             address(identity),
             address(reputation),
             address(v),
             feeRecipient,
-            TaskEscrow.Config({
-                fastPathMax: FAST_PATH_MAX,
-                fastPathMinScore: 70,
-                protocolFeeBps: FEE_BPS,
-                reviewWindow: REVIEW_WINDOW,
-                maxAcceptWindow: 1 days,
-                maxWorkWindow: 7 days
-            })
+            _cfgWith(FAST_PATH_MAX, FEE_BPS)
         );
         vm.stopPrank();
 
@@ -124,10 +117,10 @@ contract AdversarialTest is BaseTest {
         v.deposit(workerId, MIN_STAKE);
         vm.stopPrank();
 
-        // Bond the worker with the good token so the hire reaches the escrow's
-        // own guard rather than stopping at isHireable.
-        vm.prank(admin);
-        v.setMinStake(0);
+        // Treat the worker as bonded so the hire reaches the escrow's own guard
+        // rather than stopping at isHireable. (v1 did this with setMinStake(0),
+        // which v2 refuses: a zero bond would make every agent hireable.)
+        vm.mockCall(address(v), abi.encodeCall(v.isHireable, (workerId)), abi.encode(true));
 
         fot.mint(clientWallet, 1_000_000);
         vm.prank(clientWallet);
@@ -221,11 +214,21 @@ contract AdversarialTest is BaseTest {
         assertEq(escrow.lockedTotal(), huge);
     }
 
-    function test_oneBaseUnitIsPayableAndRoundsFeeToZero() public {
+    /// @dev v1 had a test asserting that a 1-unit job paid NO fee — the flaw,
+    ///      enshrined. A review must cost something, so dust is refused and
+    ///      the smallest allowed job pays the fee floor.
+    function test_dustIsRefusedAndTheSmallestJobPaysTheFeeFloor() public {
         vm.prank(clientWallet);
-        uint256 jobId =
-            escrow.createJob(clientId, workerId, 1, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW);
-        assertEq(escrow.getJob(jobId).fee, 0, "1 unit cannot pay a 1% fee");
+        vm.expectRevert(
+            abi.encodeWithSelector(ITaskEscrow.AmountBelowMinimum.selector, 1, MIN_JOB_AMOUNT)
+        );
+        escrow.createJob(clientId, workerId, 1, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW);
+
+        vm.prank(clientWallet);
+        uint256 jobId = escrow.createJob(
+            clientId, workerId, MIN_JOB_AMOUNT, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW
+        );
+        assertEq(escrow.getJob(jobId).fee, MIN_FEE, "the floor applies");
 
         uint256 before = token.balanceOf(workerWallet);
         vm.prank(workerWallet);
@@ -234,7 +237,7 @@ contract AdversarialTest is BaseTest {
         escrow.submitResult(jobId, keccak256("r"), "");
         vm.prank(clientWallet);
         escrow.approve(jobId);
-        assertEq(token.balanceOf(workerWallet) - before, 1, "the worker gets the whole unit");
+        assertEq(token.balanceOf(workerWallet) - before, MIN_JOB_AMOUNT - MIN_FEE);
     }
 
     /// @dev Deadlines are uint64; a window near the ceiling must not wrap into

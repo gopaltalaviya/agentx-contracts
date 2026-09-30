@@ -135,5 +135,15 @@
     "type": "error",
     "name": "ERC1167FailedCreateClone",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
+    "inputs": []
   }
 ]

@@ -6,6 +6,11 @@
         "name": "admin",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "adminDelay",
+        "type": "uint48",
+        "internalType": "uint48"
       }
     ],
     "stateMutability": "nonpayable"
@@ -51,6 +56,13 @@
   },
   {
     "type": "function",
+    "name": "acceptDefaultAdminTransfer",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "acceptJob",
     "inputs": [
       {
@@ -90,12 +102,70 @@
   },
   {
     "type": "function",
+    "name": "beginDefaultAdminTransfer",
+    "inputs": [
+      {
+        "name": "newAdmin",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "cancel",
     "inputs": [
       {
         "name": "jobId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "cancelDefaultAdminTransfer",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "changeDefaultAdminDelay",
+    "inputs": [
+      {
+        "name": "newDelay",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimFees",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimOwed",
+    "inputs": [
+      {
+        "name": "agentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -112,9 +182,14 @@
         "internalType": "uint128"
       },
       {
-        "name": "fastPathMinScore",
-        "type": "uint16",
-        "internalType": "uint16"
+        "name": "minJobAmount",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "minFee",
+        "type": "uint128",
+        "internalType": "uint128"
       },
       {
         "name": "protocolFeeBps",
@@ -133,6 +208,11 @@
       },
       {
         "name": "maxWorkWindow",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "disputeTimeout",
         "type": "uint64",
         "internalType": "uint64"
       }
@@ -179,9 +259,14 @@
             "internalType": "uint128"
           },
           {
-            "name": "fastPathMinScore",
-            "type": "uint16",
-            "internalType": "uint16"
+            "name": "minJobAmount",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "minFee",
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "protocolFeeBps",
@@ -200,6 +285,11 @@
           },
           {
             "name": "maxWorkWindow",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "disputeTimeout",
             "type": "uint64",
             "internalType": "uint64"
           }
@@ -268,6 +358,45 @@
   },
   {
     "type": "function",
+    "name": "defaultAdmin",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "defaultAdminDelay",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "defaultAdminDelayIncreaseWait",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "directPay",
     "inputs": [
       {
@@ -320,6 +449,19 @@
   },
   {
     "type": "function",
+    "name": "expireDispute",
+    "inputs": [
+      {
+        "name": "jobId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "expireUnaccepted",
     "inputs": [
       {
@@ -353,6 +495,19 @@
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feesOwed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -412,6 +567,21 @@
             "name": "state",
             "type": "uint8",
             "internalType": "enum ITaskEscrow.JobState"
+          },
+          {
+            "name": "reviewWindow",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeTimeout",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "disputeDeadline",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
             "name": "specHash",
@@ -530,6 +700,51 @@
   },
   {
     "type": "function",
+    "name": "owed",
+    "inputs": [
+      {
+        "name": "agentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owedTotal",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "pause",
     "inputs": [],
     "outputs": [],
@@ -550,6 +765,42 @@
   },
   {
     "type": "function",
+    "name": "pendingDefaultAdmin",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "newAdmin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "schedule",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingDefaultAdminDelay",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "newDelay",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "schedule",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -558,7 +809,7 @@
         "internalType": "bytes32"
       },
       {
-        "name": "callerConfirmation",
+        "name": "account",
         "type": "address",
         "internalType": "address"
       }
@@ -617,6 +868,13 @@
   },
   {
     "type": "function",
+    "name": "rollbackDefaultAdminDelay",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setParams",
     "inputs": [
       {
@@ -630,9 +888,14 @@
             "internalType": "uint128"
           },
           {
-            "name": "fastPathMinScore",
-            "type": "uint16",
-            "internalType": "uint16"
+            "name": "minJobAmount",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "minFee",
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "protocolFeeBps",
@@ -651,6 +914,11 @@
           },
           {
             "name": "maxWorkWindow",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "disputeTimeout",
             "type": "uint64",
             "internalType": "uint64"
           }
@@ -747,19 +1015,19 @@
       {
         "name": "token",
         "type": "address",
-        "indexed": false,
+        "indexed": true,
         "internalType": "address"
       },
       {
         "name": "identityRegistry",
         "type": "address",
-        "indexed": false,
+        "indexed": true,
         "internalType": "address"
       },
       {
         "name": "reputationRegistry",
         "type": "address",
-        "indexed": false,
+        "indexed": true,
         "internalType": "address"
       },
       {
@@ -767,6 +1035,56 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DefaultAdminDelayChangeCanceled",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DefaultAdminDelayChangeScheduled",
+    "inputs": [
+      {
+        "name": "newDelay",
+        "type": "uint48",
+        "indexed": false,
+        "internalType": "uint48"
+      },
+      {
+        "name": "effectSchedule",
+        "type": "uint48",
+        "indexed": false,
+        "internalType": "uint48"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DefaultAdminTransferCanceled",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DefaultAdminTransferScheduled",
+    "inputs": [
+      {
+        "name": "newAdmin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "acceptSchedule",
+        "type": "uint48",
+        "indexed": false,
+        "internalType": "uint48"
       }
     ],
     "anonymous": false
@@ -816,6 +1134,19 @@
   },
   {
     "type": "event",
+    "name": "DisputeExpired",
+    "inputs": [
+      {
+        "name": "jobId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "DisputeResolved",
     "inputs": [
       {
@@ -835,6 +1166,25 @@
   },
   {
     "type": "event",
+    "name": "FeeDeferred",
+    "inputs": [
+      {
+        "name": "jobId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "FeedbackFailed",
     "inputs": [
       {
@@ -847,6 +1197,25 @@
         "name": "agentId",
         "type": "uint256",
         "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeesClaimed",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
         "internalType": "uint256"
       }
     ],
@@ -997,6 +1366,31 @@
   },
   {
     "type": "event",
+    "name": "OwedClaimed",
+    "inputs": [
+      {
+        "name": "agentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ParamsUpdated",
     "inputs": [
       {
@@ -1011,9 +1405,14 @@
             "internalType": "uint128"
           },
           {
-            "name": "fastPathMinScore",
-            "type": "uint16",
-            "internalType": "uint16"
+            "name": "minJobAmount",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "minFee",
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "protocolFeeBps",
@@ -1034,13 +1433,18 @@
             "name": "maxWorkWindow",
             "type": "uint64",
             "internalType": "uint64"
+          },
+          {
+            "name": "disputeTimeout",
+            "type": "uint64",
+            "internalType": "uint64"
           }
         ]
       },
       {
         "name": "feeRecipient",
         "type": "address",
-        "indexed": false,
+        "indexed": true,
         "internalType": "address"
       }
     ],
@@ -1055,6 +1459,31 @@
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PaymentDeferred",
+    "inputs": [
+      {
+        "name": "jobId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "agentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1179,6 +1608,33 @@
   },
   {
     "type": "error",
+    "name": "AccessControlEnforcedDefaultAdminDelay",
+    "inputs": [
+      {
+        "name": "schedule",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AccessControlEnforcedDefaultAdminRules",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AccessControlInvalidDefaultAdmin",
+    "inputs": [
+      {
+        "name": "defaultAdmin",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "AccessControlUnauthorizedAccount",
     "inputs": [
       {
@@ -1233,6 +1689,22 @@
   },
   {
     "type": "error",
+    "name": "AmountBelowMinimum",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "minimum",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "AmountTooLargeForFastPath",
     "inputs": []
   },
@@ -1268,7 +1740,17 @@
   },
   {
     "type": "error",
+    "name": "InvalidFeeFloor",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidState",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidWindow",
     "inputs": []
   },
   {
@@ -1288,8 +1770,34 @@
   },
   {
     "type": "error",
+    "name": "NotOwedClaimer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingOwed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeCastOverflowedUintDowncast",
+    "inputs": [
+      {
+        "name": "bits",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1301,6 +1809,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "SameOwner",
+    "inputs": []
   },
   {
     "type": "error",
@@ -1326,6 +1839,11 @@
   {
     "type": "error",
     "name": "WindowTooLong",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAddress",
     "inputs": []
   },
   {

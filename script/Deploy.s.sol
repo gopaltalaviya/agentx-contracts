@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {AgentAccountFactory} from "../src/AgentAccountFactory.sol";
 import {StakeVault} from "../src/StakeVault.sol";
@@ -26,12 +26,14 @@ contract Deploy is Script {
         uint96 minStake;
         uint64 withdrawDelaySeconds;
         uint128 fastPathMax;
-        uint16 fastPathMinScore;
+        uint128 minJobAmount;
+        uint128 minFee;
         uint16 protocolFeeBps;
         uint64 acceptWindowSeconds;
         uint64 workWindowSeconds;
         uint64 reviewWindowSeconds;
-        uint32 confidenceFloor;
+        uint64 disputeTimeoutSeconds;
+        uint48 adminDelaySeconds;
     }
 
     string internal networksJson;
@@ -52,6 +54,8 @@ contract Deploy is Script {
         // two variables from the start, and until now nothing read them.
         address feeRecipient = _envAddressOr("FEE_RECIPIENT", admin);
         address arbiter = _envAddressOr("ARBITER_ADDRESS", admin);
+        // Slashed bonds go here; the fee recipient unless told otherwise.
+        address slashRecipient = _envAddressOr("SLASH_RECIPIENT", feeRecipient);
 
         console2.log("=====================================");
         console2.log("AGENTX deploy");
@@ -61,6 +65,7 @@ contract Deploy is Script {
         console2.log("  admin    :", admin);
         console2.log("  fees to  :", feeRecipient);
         console2.log("  arbiter  :", arbiter);
+        console2.log("  slash to :", slashRecipient);
         console2.log("=====================================");
 
         vm.startBroadcast();
@@ -68,10 +73,15 @@ contract Deploy is Script {
         address paymentToken = _resolvePaymentToken(isTestnet);
         (address identityRegistry, address reputationRegistry) = _resolveErc8004(isTestnet);
 
-        StakeVault vault = new StakeVault(admin);
-        vault.configure(paymentToken, identityRegistry, p.minStake, p.withdrawDelaySeconds);
+        // The admin delay makes handing over the admin role a two-step,
+        // time-locked operation. Plain CREATE: the delay differs per chain, so
+        // the constructor arguments (and the addresses) differ too.
+        StakeVault vault = new StakeVault(admin, p.adminDelaySeconds);
+        vault.configure(
+            paymentToken, identityRegistry, p.minStake, p.withdrawDelaySeconds, slashRecipient
+        );
 
-        TaskEscrow escrow = new TaskEscrow(admin);
+        TaskEscrow escrow = new TaskEscrow(admin, p.adminDelaySeconds);
         escrow.configure(
             paymentToken,
             identityRegistry,
@@ -80,14 +90,16 @@ contract Deploy is Script {
             feeRecipient,
             TaskEscrow.Config({
                 fastPathMax: p.fastPathMax,
-                fastPathMinScore: p.fastPathMinScore,
+                minJobAmount: p.minJobAmount,
+                minFee: p.minFee,
                 protocolFeeBps: p.protocolFeeBps,
                 reviewWindow: p.reviewWindowSeconds,
                 // Caller-supplied windows are clamped to these. Without a
                 // ceiling a client could set a 1000-year deadline and lock its
                 // own funds past any refund.
                 maxAcceptWindow: p.acceptWindowSeconds * 10,
-                maxWorkWindow: p.workWindowSeconds * 10
+                maxWorkWindow: p.workWindowSeconds * 10,
+                disputeTimeout: p.disputeTimeoutSeconds
             })
         );
 
@@ -114,6 +126,10 @@ contract Deploy is Script {
         console2.log("PARAM minStake    :", p.minStake);
         console2.log("PARAM fastPathMax :", p.fastPathMax);
         console2.log("PARAM feeBps      :", p.protocolFeeBps);
+        console2.log("PARAM minJob      :", p.minJobAmount);
+        console2.log("PARAM minFee      :", p.minFee);
+        console2.log("PARAM dispute (s) :", p.disputeTimeoutSeconds);
+        console2.log("PARAM adminDelay  :", p.adminDelaySeconds);
         console2.log("");
         console2.log("Next: node scripts/write-deployment.mjs <network-alias>");
     }
@@ -176,16 +192,22 @@ contract Deploy is Script {
         p.minStake = uint96(vm.parseUint(vm.parseJsonString(paramsJson, ".minStake")));
         p.withdrawDelaySeconds = uint64(vm.parseJsonUint(paramsJson, ".withdrawDelaySeconds"));
         p.fastPathMax = uint128(vm.parseUint(vm.parseJsonString(paramsJson, ".fastPathMax")));
-        p.fastPathMinScore = uint16(vm.parseJsonUint(paramsJson, ".fastPathMinScore"));
+        p.minJobAmount = uint128(vm.parseUint(vm.parseJsonString(paramsJson, ".minJobAmount")));
+        p.minFee = uint128(vm.parseUint(vm.parseJsonString(paramsJson, ".minFee")));
         p.protocolFeeBps = uint16(vm.parseJsonUint(paramsJson, ".protocolFeeBps"));
         p.acceptWindowSeconds = uint64(vm.parseJsonUint(paramsJson, ".acceptWindowSeconds"));
         p.workWindowSeconds = uint64(vm.parseJsonUint(paramsJson, ".workWindowSeconds"));
         p.reviewWindowSeconds = uint64(vm.parseJsonUint(paramsJson, ".reviewWindowSeconds"));
-        p.confidenceFloor = uint32(vm.parseJsonUint(paramsJson, ".confidenceFloor"));
+        p.disputeTimeoutSeconds = uint64(vm.parseJsonUint(paramsJson, ".disputeTimeoutSeconds"));
+        p.adminDelaySeconds = uint48(vm.parseJsonUint(paramsJson, ".adminDelaySeconds"));
+        // fastPathMinScore and confidenceFloor are OFF-chain policy, enforced
+        // by the API; the contract never read them, so it no longer stores them.
 
         require(p.fastPathMax > 0, "fastPathMax must be > 0");
         require(p.protocolFeeBps <= 1000, "protocolFeeBps > 10%");
         require(p.reviewWindowSeconds > 0, "reviewWindow 0 would trap funds");
+        require(p.minFee < p.minJobAmount, "minFee must be below minJobAmount");
+        require(p.disputeTimeoutSeconds > 0, "disputeTimeout 0 would expire every dispute");
     }
 
     function _key(string memory path) internal view returns (string memory) {

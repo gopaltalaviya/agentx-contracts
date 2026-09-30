@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity 0.8.26;
 
 import {StakeVault} from "../../src/StakeVault.sol";
 import {TaskEscrow} from "../../src/TaskEscrow.sol";
@@ -12,14 +12,7 @@ import {BaseTest} from "../Base.t.sol";
 ///      the ones nobody exercises until production.
 contract GuardsTest is BaseTest {
     function _cfg(uint16 feeBps) internal pure returns (TaskEscrow.Config memory) {
-        return TaskEscrow.Config({
-            fastPathMax: FAST_PATH_MAX,
-            fastPathMinScore: 70,
-            protocolFeeBps: feeBps,
-            reviewWindow: REVIEW_WINDOW,
-            maxAcceptWindow: 1 days,
-            maxWorkWindow: 7 days
-        });
+        return _cfgWith(FAST_PATH_MAX, feeBps);
     }
 
     // ───────────────────────── configuration ─────────────────────────
@@ -38,7 +31,7 @@ contract GuardsTest is BaseTest {
     }
 
     function test_configureRejectsExcessiveFee() public {
-        TaskEscrow fresh = new TaskEscrow(admin);
+        TaskEscrow fresh = new TaskEscrow(admin, ADMIN_DELAY);
         vm.prank(admin);
         vm.expectRevert(TaskEscrow.FeeTooHigh.selector);
         fresh.configure(
@@ -58,14 +51,14 @@ contract GuardsTest is BaseTest {
     }
 
     function test_unconfiguredEscrowRefusesWork() public {
-        TaskEscrow fresh = new TaskEscrow(admin);
+        TaskEscrow fresh = new TaskEscrow(admin, ADMIN_DELAY);
         vm.prank(clientWallet);
         vm.expectRevert(TaskEscrow.NotConfigured.selector);
         fresh.createJob(clientId, workerId, PRICE, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW);
     }
 
     function test_unconfiguredVaultRefusesDeposits() public {
-        StakeVault fresh = new StakeVault(admin);
+        StakeVault fresh = new StakeVault(admin, ADMIN_DELAY);
         vm.expectRevert(StakeVault.NotConfigured.selector);
         fresh.deposit(workerId, 1);
     }
@@ -73,7 +66,9 @@ contract GuardsTest is BaseTest {
     function test_vaultCannotBeConfiguredTwice() public {
         vm.prank(admin);
         vm.expectRevert(StakeVault.AlreadyConfigured.selector);
-        vault.configure(address(token), address(identity), MIN_STAKE, WITHDRAW_DELAY);
+        vault.configure(
+            address(token), address(identity), MIN_STAKE, WITHDRAW_DELAY, slashRecipient
+        );
     }
 
     function test_onlyConfigurerMaySetParams() public {
@@ -110,36 +105,21 @@ contract GuardsTest is BaseTest {
 
     /// @dev At 1% an amount below 100 base units rounds the fee to zero. The
     ///      worker must still be paid in full and no zero-value transfer made.
-    function test_dustAmountPaysWorkerInFullWithZeroFee() public {
-        uint128 dust = 99; // 99 * 100 / 10_000 == 0
-        assertEq(_feeOf(dust), 0, "fee must round to zero here");
-
-        uint256 beforeWorker = token.balanceOf(workerWallet);
-        uint256 beforeFee = token.balanceOf(feeRecipient);
+    /// @dev v1 tested that dust paid the worker in full with no fee — which
+    ///      is exactly how a review could be bought for the price of gas. Both
+    ///      paths now refuse anything below `minJobAmount`.
+    function test_dustIsRefusedOnBothPaths() public {
+        vm.prank(clientWallet);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITaskEscrow.AmountBelowMinimum.selector, 99, MIN_JOB_AMOUNT)
+        );
+        escrow.directPay(clientId, workerId, 99, keccak256("s"));
 
         vm.prank(clientWallet);
-        escrow.directPay(clientId, workerId, dust, keccak256("s"));
-
-        assertEq(token.balanceOf(workerWallet) - beforeWorker, dust, "worker gets all of it");
-        assertEq(token.balanceOf(feeRecipient), beforeFee, "no fee transfer at all");
-    }
-
-    function test_dustAmountThroughEscrowAlsoPaysInFull() public {
-        uint128 dust = 50;
-        uint256 beforeWorker = token.balanceOf(workerWallet);
-
-        vm.prank(clientWallet);
-        uint256 jobId =
-            escrow.createJob(clientId, workerId, dust, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW);
-        vm.prank(workerWallet);
-        escrow.acceptJob(jobId);
-        vm.prank(workerWallet);
-        escrow.submitResult(jobId, keccak256("r"), "");
-        vm.prank(clientWallet);
-        escrow.approve(jobId);
-
-        assertEq(token.balanceOf(workerWallet) - beforeWorker, dust);
-        assertEq(escrow.lockedTotal(), 0);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITaskEscrow.AmountBelowMinimum.selector, 50, MIN_JOB_AMOUNT)
+        );
+        escrow.createJob(clientId, workerId, 50, keccak256("s"), ACCEPT_WINDOW, WORK_WINDOW);
     }
 
     function test_directPayZeroAmountRejected() public {

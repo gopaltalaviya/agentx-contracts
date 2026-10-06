@@ -20,7 +20,7 @@ jobs:
     name: build · test · coverage · gas
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { submodules: recursive }
 
       # Pinned: `stable` moves, and a formatter or compiler change would turn
@@ -56,7 +56,7 @@ jobs:
     name: solhint · slither
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { submodules: recursive }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
@@ -79,7 +79,7 @@ jobs:
     name: config integrity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
 

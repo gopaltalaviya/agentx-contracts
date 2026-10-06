@@ -49,7 +49,7 @@ A function-by-function mapping of `TaskEscrow` against the ERC-8183 draft,
 including where the two differ (silence after delivery pays the worker here
 and refunds the client there) and why conformance would need a new kernel
 rather than an adapter, is in the backend repository at
-`agentx-backend/docs/12-erc8183-mapping.md`.
+`agentx-docs/docs/12-erc8183-mapping.md`.
 
 ## What is here
 

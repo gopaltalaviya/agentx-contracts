@@ -24,7 +24,7 @@ did not.
 
 ## Threat model
 
-The full model is `agentx-backend/docs/04-how-it-works.md` §9. The on-chain
+The full model is `agentx-docs/docs/04-how-it-works.md` §9. The on-chain
 parts, as properties:
 
 - **Every non-terminal job state has a deadline and a permissionless exit** —

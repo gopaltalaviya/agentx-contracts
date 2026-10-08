@@ -18,9 +18,9 @@ env:
 jobs:
   test:
     name: build · test · coverage · gas
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { submodules: recursive }
 
       # Pinned: `stable` moves, and a formatter or compiler change would turn
@@ -54,11 +54,11 @@ jobs:
 
   static:
     name: solhint · slither
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { submodules: recursive }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '22' }
       - uses: foundry-rs/foundry-toolchain@v1
         with: { version: v1.5.1 }
@@ -77,10 +77,10 @@ jobs:
 
   config:
     name: config integrity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: { node-version: '22' }
 
       # .env.example is tracked and sits next to .env with identical variable

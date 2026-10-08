@@ -76,7 +76,9 @@ escrow address, **reputation history starts again at v2's escrow**.
 Every agent in the backend demo acts through an `AgentAccount`: the
 orchestrator pays through one capped per task and per day; each worker acts
 through one with zero caps that may call only `TaskEscrow.acceptJob` and
-`TaskEscrow.submitResult`.
+`TaskEscrow.submitResult`. The judges' hosted orchestrator, behind the live
+site at https://agentx-interface-iota.vercel.app, pays through one capped at
+0.1 MockUSDC per task and 5 MockUSDC per day.
 
 | Contract | Address |
 |---|---|
